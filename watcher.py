@@ -84,6 +84,16 @@ def change_wallpaper():
     )
 
 
+def load_calendar_context() -> str | None:
+    """Try to get calendar context. Returns None if unavailable."""
+    try:
+        from calendar_helper import get_calendar_context
+        return get_calendar_context()
+    except Exception as e:
+        print(f"  [Calendar] Unavailable: {e}")
+        return None
+
+
 def main():
     blocked_sites = load_blocked_sites()
     print(f"[Scroll Jail] Watching. Blocked sites: {blocked_sites}")
@@ -95,6 +105,14 @@ def main():
     warned_10s = False
     warned_30s = False
     punished_60s = False
+
+    # Fetch calendar context at startup and refresh every 5 min
+    cal_context = load_calendar_context()
+    cal_last_fetch = time.time()
+    if cal_context:
+        print(f"  [Calendar] Context: {cal_context}")
+    else:
+        print(f"  [Calendar] No upcoming events found")
 
     while True:
         now = time.time()
@@ -126,42 +144,72 @@ def main():
 
         dwell = int(now - blocked_since) if (is_blocked and blocked_since) else 0
 
+        # Refresh calendar context every 5 minutes (regardless of blocked state)
+        if now - cal_last_fetch > 300:
+            cal_context = load_calendar_context()
+            cal_last_fetch = now
+            if cal_context:
+                print(f"  [Calendar] Refreshed: {cal_context}")
+
         # --- Escalation ladder ---
         if is_blocked:
+
             if dwell >= 60 and not punished_60s:
-                msgs = [
-                    f"That's it. 60 seconds on {domain}. Chrome privileges: revoked.",
-                    f"Congratulations, you scrolled {domain} for a full minute. Here's your prize: no more Chrome.",
-                    f"I gave you chances. You chose {domain}. Now enjoy this wallpaper.",
-                    f"60 seconds of pure {domain} brain rot. Closing Chrome. You did this to yourself.",
-                    f"Fun's over. {domain} just cost you your browser and your wallpaper.",
-                ]
+                if cal_context:
+                    msgs = [
+                        f"You have {cal_context}. But sure, {domain} was more important. Chrome: gone.",
+                        f"{cal_context} — and you just blew 60 seconds on {domain}. Enjoy the wallpaper.",
+                        f"With {cal_context} coming up, you chose {domain}. Closing Chrome. Unbelievable.",
+                    ]
+                else:
+                    msgs = [
+                        f"That's it. 60 seconds on {domain}. Chrome privileges: revoked.",
+                        f"Congratulations, you scrolled {domain} for a full minute. Here's your prize: no more Chrome.",
+                        f"I gave you chances. You chose {domain}. Now enjoy this wallpaper.",
+                        f"60 seconds of pure {domain} brain rot. Closing Chrome. You did this to yourself.",
+                        f"Fun's over. {domain} just cost you your browser and your wallpaper.",
+                    ]
                 print(f"  ESCALATION: 60s — closing Chrome + shame wallpaper")
                 send_notification("Scroll Jail", random.choice(msgs))
                 close_chrome()
                 change_wallpaper()
                 punished_60s = True
             elif dwell >= 30 and not warned_30s:
-                msgs = [
-                    f"30 seconds on {domain}. You have 30 more before I close Chrome. Your move.",
-                    f"Still on {domain}? Bold. Chrome gets nuked in 30 seconds. Tick tock.",
-                    f"Half a minute wasted on {domain}. In 30 seconds I'm pulling the plug.",
-                    f"You're really testing me. 30 seconds left before {domain} goes bye-bye.",
-                    f"This is your FINAL warning. Get off {domain} or lose Chrome in 30 seconds.",
-                ]
+                if cal_context:
+                    msgs = [
+                        f"You have {cal_context} and you're still on {domain}? 30 seconds before Chrome dies.",
+                        f"{cal_context} is coming up. Get off {domain}. 30 seconds. I'm serious.",
+                        f"Reminder: {cal_context}. Still on {domain}. Chrome closes in 30 seconds.",
+                    ]
+                else:
+                    msgs = [
+                        f"30 seconds on {domain}. You have 30 more before I close Chrome. Your move.",
+                        f"Still on {domain}? Bold. Chrome gets nuked in 30 seconds. Tick tock.",
+                        f"Half a minute wasted on {domain}. In 30 seconds I'm pulling the plug.",
+                        f"You're really testing me. 30 seconds left before {domain} goes bye-bye.",
+                        f"This is your FINAL warning. Get off {domain} or lose Chrome in 30 seconds.",
+                    ]
                 print(f"  ESCALATION: 30s — final warning")
                 send_notification("Scroll Jail", random.choice(msgs))
                 warned_30s = True
             elif dwell >= 10 and not warned_10s:
-                msgs = [
-                    f"Caught you on {domain}. Close it now or things escalate.",
-                    f"Really? {domain}? You have better things to do and we both know it.",
-                    f"10 seconds on {domain}. I'm watching. Don't make me do something we'll both regret.",
-                    f"Hey. {domain}. Stop it. This is your friendly first warning.",
-                    f"I see you on {domain}. Step away from the timeline.",
-                    f"{domain}? In THIS economy? Get back to work.",
-                    f"You opened {domain} like I wouldn't notice. I noticed.",
-                ]
+                if cal_context:
+                    msgs = [
+                        f"You have {cal_context}. And you're on {domain}? Really?",
+                        f"{domain}? With {cal_context} coming up? Bold choice.",
+                        f"Friendly reminder: {cal_context}. Now close {domain}.",
+                        f"{cal_context} isn't going to prepare for itself. Get off {domain}.",
+                    ]
+                else:
+                    msgs = [
+                        f"Caught you on {domain}. Close it now or things escalate.",
+                        f"Really? {domain}? You have better things to do and we both know it.",
+                        f"10 seconds on {domain}. I'm watching. Don't make me do something we'll both regret.",
+                        f"Hey. {domain}. Stop it. This is your friendly first warning.",
+                        f"I see you on {domain}. Step away from the timeline.",
+                        f"{domain}? In THIS economy? Get back to work.",
+                        f"You opened {domain} like I wouldn't notice. I noticed.",
+                    ]
                 print(f"  ESCALATION: 10s — first warning")
                 send_notification("Scroll Jail", random.choice(msgs))
                 warned_10s = True
