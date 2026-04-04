@@ -500,7 +500,7 @@
                 </div>
                 <div class="status-info">
                     {% if state.get('is_blocked') %}
-                        <div class="status-title">On <strong>{{ state.get('current_domain', '?') }}</strong></div>
+                        <div class="status-title">On <strong>{{ state.get('blocked_target', state.get('current_domain', '?')) }}</strong></div>
                         <div class="status-detail">{{ state.get('dwell_seconds', 0) }}s and counting...</div>
                     {% elif state.get('current_app') %}
                         <div class="status-title">Focused</div>
@@ -609,6 +609,61 @@
             <div class="add-site-form">
                 <form method="POST" action="/add-custom">
                     <input type="text" name="domain" placeholder="Add domain, e.g. tiktok.com" required>
+                    <button type="submit" class="btn btn-soft">Add</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Blocked Apps -->
+        <div class="section-gap"></div>
+        <div class="section-label">Blocked Apps</div>
+        <div class="card">
+            {% set app_domains = {
+                "Prime Video": "primevideo.com",
+                "Netflix": "netflix.com",
+                "TikTok": "tiktok.com",
+                "Twitter": "twitter.com",
+                "Instagram": "instagram.com",
+                "Hulu": "hulu.com",
+                "Disney+": "disneyplus.com",
+                "Spotify": "spotify.com",
+                "Twitch": "twitch.tv",
+                "YouTube": "youtube.com",
+                "Facebook": "facebook.com",
+                "Reddit": "reddit.com",
+                "Snapchat": "snapchat.com",
+                "Pinterest": "pinterest.com",
+                "Telegram": "telegram.org",
+                "Discord": "discord.com",
+                "Slack": "slack.com",
+                "WhatsApp": "whatsapp.com"
+            } %}
+            {% for app_name, enabled in config.get('blocked_apps', {}).items() %}
+            <div class="site-item">
+                <div class="site-meta">
+                    <div class="site-icon">
+                        {% if app_name in app_domains %}
+                        <img src="https://www.google.com/s2/favicons?domain={{ app_domains[app_name] }}&sz=32"
+                             alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                        <span class="site-icon-fallback" style="display:none">{{ app_name[:2] }}</span>
+                        {% else %}
+                        <span class="site-icon-fallback">{{ app_name[:2] }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="site-label {{ '' if enabled else 'dimmed' }}">{{ app_name }}</span>
+                </div>
+                <form method="POST" action="/toggle-app" class="toggle-wrap">
+                    <input type="hidden" name="app_name" value="{{ app_name }}">
+                    <label class="toggle">
+                        <input type="checkbox" {{ 'checked' if enabled else '' }} onchange="this.closest('form').submit()">
+                        <span class="toggle-rail"></span>
+                    </label>
+                </form>
+            </div>
+            {% endfor %}
+            <div class="add-site-form">
+                <form method="POST" action="/add-app">
+                    <input type="text" name="app_name" placeholder="Add app name, e.g. Spotify" required>
                     <button type="submit" class="btn btn-soft">Add</button>
                 </form>
             </div>

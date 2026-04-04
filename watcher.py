@@ -31,6 +31,15 @@ def load_blocked_sites() -> set[str]:
         return {"twitter.com", "x.com", "reddit.com", "youtube.com"}
 
 
+def load_blocked_apps() -> set[str]:
+    """Load blocked app names from config.json."""
+    try:
+        config = json.loads(CONFIG_FILE.read_text())
+        return {name for name, enabled in config.get("blocked_apps", {}).items() if enabled}
+    except Exception:
+        return set()
+
+
 def run_applescript(script: str) -> str | None:
     try:
         r = subprocess.run(
@@ -77,6 +86,10 @@ def close_chrome():
     run_applescript('tell application "Google Chrome" to quit')
 
 
+def close_app(app_name: str):
+    run_applescript(f'tell application "{app_name}" to quit')
+
+
 def change_wallpaper():
     shame_path = "/Users/kaavin/Downloads/Work.jpg"
     run_applescript(
@@ -96,9 +109,11 @@ def load_calendar_context() -> str | None:
 
 def main():
     blocked_sites = load_blocked_sites()
+    blocked_apps = load_blocked_apps()
     print(f"[Scroll Jail] Watching. Blocked sites: {blocked_sites}")
+    print(f"[Scroll Jail] Blocked apps: {blocked_apps}")
     blocked_since: float | None = None
-    last_domain = ""
+    last_blocked_target = ""
     config_reload_counter = 0
 
     # Track which escalation steps have fired for the current blocked session
@@ -121,23 +136,31 @@ def main():
         config_reload_counter += 1
         if config_reload_counter >= 10:
             blocked_sites = load_blocked_sites()
+            blocked_apps = load_blocked_apps()
             config_reload_counter = 0
 
         app = get_frontmost_app()
         url = None
         domain = ""
         is_blocked = False
+        blocked_target = ""  # what to show in notifications (domain or app name)
 
-        if app == "Google Chrome":
+        if app and app in blocked_apps:
+            # Blocked native app
+            is_blocked = True
+            blocked_target = app
+        elif app == "Google Chrome":
             url = get_chrome_url()
             if url:
                 domain = extract_domain(url)
-                is_blocked = domain in blocked_sites
+                if domain in blocked_sites:
+                    is_blocked = True
+                    blocked_target = domain
 
-        # Reset timer and escalation flags whenever the domain changes
-        if domain != last_domain:
+        # Reset timer and escalation flags whenever the blocked target changes
+        if blocked_target != last_blocked_target:
             blocked_since = now if is_blocked else None
-            last_domain = domain
+            last_blocked_target = blocked_target
             warned_10s = False
             warned_30s = False
             punished_60s = False
@@ -154,40 +177,46 @@ def main():
         # --- Escalation ladder ---
         if is_blocked:
 
+            t = blocked_target  # shorthand for messages
+            is_app = app and app in blocked_apps  # native app vs browser
+
             if dwell >= 60 and not punished_60s:
                 if cal_context:
                     msgs = [
-                        f"You have {cal_context}. But sure, {domain} was more important. Chrome: gone.",
-                        f"{cal_context} — and you just blew 60 seconds on {domain}. Enjoy the wallpaper.",
-                        f"With {cal_context} coming up, you chose {domain}. Closing Chrome. Unbelievable.",
+                        f"You have {cal_context}. But sure, {t} was more important. Gone.",
+                        f"{cal_context} — and you just blew 60 seconds on {t}. Enjoy the wallpaper.",
+                        f"With {cal_context} coming up, you chose {t}. Unbelievable.",
                     ]
                 else:
                     msgs = [
-                        f"That's it. 60 seconds on {domain}. Chrome privileges: revoked.",
-                        f"Congratulations, you scrolled {domain} for a full minute. Here's your prize: no more Chrome.",
-                        f"I gave you chances. You chose {domain}. Now enjoy this wallpaper.",
-                        f"60 seconds of pure {domain} brain rot. Closing Chrome. You did this to yourself.",
-                        f"Fun's over. {domain} just cost you your browser and your wallpaper.",
+                        f"That's it. 60 seconds on {t}. Privileges revoked.",
+                        f"Congratulations, you wasted a full minute on {t}. Shutting it down.",
+                        f"I gave you chances. You chose {t}. Now enjoy this wallpaper.",
+                        f"60 seconds of pure {t} brain rot. You did this to yourself.",
+                        f"Fun's over. {t} just cost you everything.",
                     ]
-                print(f"  ESCALATION: 60s — closing Chrome + shame wallpaper")
+                print(f"  ESCALATION: 60s — closing app + shame wallpaper")
                 send_notification("Scroll Jail", random.choice(msgs))
-                close_chrome()
+                if is_app:
+                    close_app(app)
+                else:
+                    close_chrome()
                 change_wallpaper()
                 punished_60s = True
             elif dwell >= 30 and not warned_30s:
                 if cal_context:
                     msgs = [
-                        f"You have {cal_context} and you're still on {domain}? 30 seconds before Chrome dies.",
-                        f"{cal_context} is coming up. Get off {domain}. 30 seconds. I'm serious.",
-                        f"Reminder: {cal_context}. Still on {domain}. Chrome closes in 30 seconds.",
+                        f"You have {cal_context} and you're still on {t}? 30 seconds before I shut it down.",
+                        f"{cal_context} is coming up. Get off {t}. 30 seconds. I'm serious.",
+                        f"Reminder: {cal_context}. Still on {t}. Closing in 30 seconds.",
                     ]
                 else:
                     msgs = [
-                        f"30 seconds on {domain}. You have 30 more before I close Chrome. Your move.",
-                        f"Still on {domain}? Bold. Chrome gets nuked in 30 seconds. Tick tock.",
-                        f"Half a minute wasted on {domain}. In 30 seconds I'm pulling the plug.",
-                        f"You're really testing me. 30 seconds left before {domain} goes bye-bye.",
-                        f"This is your FINAL warning. Get off {domain} or lose Chrome in 30 seconds.",
+                        f"30 seconds on {t}. You have 30 more before I shut it down. Your move.",
+                        f"Still on {t}? Bold. Gets nuked in 30 seconds. Tick tock.",
+                        f"Half a minute wasted on {t}. In 30 seconds I'm pulling the plug.",
+                        f"You're really testing me. 30 seconds left before {t} goes bye-bye.",
+                        f"This is your FINAL warning. Get off {t} or it's gone in 30 seconds.",
                     ]
                 print(f"  ESCALATION: 30s — final warning")
                 send_notification("Scroll Jail", random.choice(msgs))
@@ -195,20 +224,20 @@ def main():
             elif dwell >= 10 and not warned_10s:
                 if cal_context:
                     msgs = [
-                        f"You have {cal_context}. And you're on {domain}? Really?",
-                        f"{domain}? With {cal_context} coming up? Bold choice.",
-                        f"Friendly reminder: {cal_context}. Now close {domain}.",
-                        f"{cal_context} isn't going to prepare for itself. Get off {domain}.",
+                        f"You have {cal_context}. And you're on {t}? Really?",
+                        f"{t}? With {cal_context} coming up? Bold choice.",
+                        f"Friendly reminder: {cal_context}. Now close {t}.",
+                        f"{cal_context} isn't going to prepare for itself. Get off {t}.",
                     ]
                 else:
                     msgs = [
-                        f"Caught you on {domain}. Close it now or things escalate.",
-                        f"Really? {domain}? You have better things to do and we both know it.",
-                        f"10 seconds on {domain}. I'm watching. Don't make me do something we'll both regret.",
-                        f"Hey. {domain}. Stop it. This is your friendly first warning.",
-                        f"I see you on {domain}. Step away from the timeline.",
-                        f"{domain}? In THIS economy? Get back to work.",
-                        f"You opened {domain} like I wouldn't notice. I noticed.",
+                        f"Caught you on {t}. Close it now or things escalate.",
+                        f"Really? {t}? You have better things to do and we both know it.",
+                        f"10 seconds on {t}. I'm watching. Don't make me do something we'll both regret.",
+                        f"Hey. {t}. Stop it. This is your friendly first warning.",
+                        f"I see you on {t}. Step away.",
+                        f"{t}? In THIS economy? Get back to work.",
+                        f"You opened {t} like I wouldn't notice. I noticed.",
                     ]
                 print(f"  ESCALATION: 10s — first warning")
                 send_notification("Scroll Jail", random.choice(msgs))
@@ -218,6 +247,7 @@ def main():
             "current_app": app or "",
             "current_url": url or "",
             "current_domain": domain,
+            "blocked_target": blocked_target,
             "is_blocked": is_blocked,
             "blocked_since": blocked_since,
             "dwell_seconds": dwell,
@@ -226,7 +256,7 @@ def main():
         save_state(state)
 
         if is_blocked:
-            print(f"  WARNING: BLOCKED: {domain} - {dwell}s")
+            print(f"  WARNING: BLOCKED: {blocked_target} - {dwell}s")
 
         time.sleep(POLL_INTERVAL)
 
