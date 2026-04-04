@@ -10,8 +10,5 @@
   "custom_sites": [
     "tiktok.com"
   ],
-  "focus_session": {
-    "start_time": 1775326464.064516,
-    "duration_minutes": 50
-  }
+  "focus_session": null
 }

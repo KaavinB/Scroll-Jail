@@ -77,7 +77,7 @@ def close_chrome():
 
 
 def change_wallpaper():
-    shame_path = "/System/Library/Desktop Pictures/Solid Colors/Red Orange.png"
+    shame_path = "/Users/kaavin/Downloads/Work.jpg"
     run_applescript(
         f'tell application "System Events" to tell every desktop to set picture to "{shame_path}"'
     )
