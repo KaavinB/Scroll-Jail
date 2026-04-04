@@ -5,6 +5,7 @@ Detects frontmost app, Chrome URL, blocked site dwell time.
 Writes current state to state.json.
 """
 import json
+import random
 import subprocess
 import time
 from urllib.parse import urlparse
@@ -128,18 +129,41 @@ def main():
         # --- Escalation ladder ---
         if is_blocked:
             if dwell >= 60 and not punished_60s:
+                msgs = [
+                    f"That's it. 60 seconds on {domain}. Chrome privileges: revoked.",
+                    f"Congratulations, you scrolled {domain} for a full minute. Here's your prize: no more Chrome.",
+                    f"I gave you chances. You chose {domain}. Now enjoy this wallpaper.",
+                    f"60 seconds of pure {domain} brain rot. Closing Chrome. You did this to yourself.",
+                    f"Fun's over. {domain} just cost you your browser and your wallpaper.",
+                ]
                 print(f"  ESCALATION: 60s — closing Chrome + shame wallpaper")
-                send_notification("Scroll Jail", f"Time's up. Closing Chrome. You wasted 60s on {domain}.")
+                send_notification("Scroll Jail", random.choice(msgs))
                 close_chrome()
                 change_wallpaper()
                 punished_60s = True
             elif dwell >= 30 and not warned_30s:
+                msgs = [
+                    f"30 seconds on {domain}. You have 30 more before I close Chrome. Your move.",
+                    f"Still on {domain}? Bold. Chrome gets nuked in 30 seconds. Tick tock.",
+                    f"Half a minute wasted on {domain}. In 30 seconds I'm pulling the plug.",
+                    f"You're really testing me. 30 seconds left before {domain} goes bye-bye.",
+                    f"This is your FINAL warning. Get off {domain} or lose Chrome in 30 seconds.",
+                ]
                 print(f"  ESCALATION: 30s — final warning")
-                send_notification("Scroll Jail", f"Still on {domain}! Chrome WILL be closed in 30 seconds.")
+                send_notification("Scroll Jail", random.choice(msgs))
                 warned_30s = True
             elif dwell >= 10 and not warned_10s:
+                msgs = [
+                    f"Caught you on {domain}. Close it now or things escalate.",
+                    f"Really? {domain}? You have better things to do and we both know it.",
+                    f"10 seconds on {domain}. I'm watching. Don't make me do something we'll both regret.",
+                    f"Hey. {domain}. Stop it. This is your friendly first warning.",
+                    f"I see you on {domain}. Step away from the timeline.",
+                    f"{domain}? In THIS economy? Get back to work.",
+                    f"You opened {domain} like I wouldn't notice. I noticed.",
+                ]
                 print(f"  ESCALATION: 10s — first warning")
-                send_notification("Scroll Jail", f"You've been on {domain} for 10 seconds. Get back to work!")
+                send_notification("Scroll Jail", random.choice(msgs))
                 warned_10s = True
 
         state = {

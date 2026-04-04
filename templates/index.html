@@ -4,259 +4,483 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scroll Jail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-height: 100vh;
-            padding: 2rem;
+        :root {
+            --bg: #09090b;
+            --card: #111113;
+            --border: #1e1e23;
+            --border-hover: #2e2e35;
+            --muted: #63636e;
+            --text: #ececef;
+            --text-dim: #9898a0;
+            --red: #f43f5e;
+            --red-dim: rgba(244, 63, 94, 0.12);
+            --green: #34d399;
+            --green-dim: rgba(52, 211, 153, 0.12);
+            --white: #fafafa;
+            --r: 10px;
         }
-        h1 { color: #e94560; margin-bottom: 0.5rem; font-size: 1.8rem; }
-        h2 { color: #e94560; margin: 1.5rem 0 0.75rem; font-size: 1.2rem; }
-        .subtitle { color: #888; margin-bottom: 2rem; }
-        .container { max-width: 600px; margin: 0 auto; }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 3rem 1.5rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 480px; margin: 0 auto; }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.35rem;
+        }
+        .header p {
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 400;
+        }
+
+        /* ── Cards ── */
         .card {
-            background: #16213e;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .card-head {
+            padding: 0.875rem 1.125rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-head h2 {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            letter-spacing: 0.02em;
+        }
+        .card-body { padding: 1.125rem; }
+
+        /* ── Status ── */
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .status-indicator {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-indicator.ok { background: var(--green); box-shadow: 0 0 8px rgba(52,211,153,0.4); }
+        .status-indicator.bad { background: var(--red); box-shadow: 0 0 8px rgba(244,63,94,0.4); }
+        .status-indicator.off { background: var(--muted); }
+        .status-text { font-size: 0.85rem; }
+        .status-text strong { font-weight: 500; }
+        .status-sub { color: var(--muted); font-size: 0.75rem; margin-top: 0.125rem; }
+
+        /* ── Timer ── */
+        .timer-center { text-align: center; padding: 0.5rem 0; }
+        .timer-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 300;
+            letter-spacing: 0.04em;
+            line-height: 1.2;
+        }
+        .timer-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+        .timer-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .timer-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--red), #fb923c);
+            border-radius: 2px;
+            transition: width 1s linear;
+        }
+        .timer-done .timer-time { color: var(--green); }
+        .timer-done .timer-sub { color: var(--green); }
+        .timer-done .timer-bar-fill { background: var(--green); }
+
+        /* ── Duration picker ── */
+        .dur-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .dur-opt { flex: 1; }
+        .dur-opt input[type="radio"] { display: none; }
+        .dur-opt label {
+            display: block;
+            text-align: center;
+            padding: 0.6rem 0;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 1.25rem;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .dur-opt label:hover { border-color: var(--border-hover); color: var(--text); }
+        .dur-opt input:checked + label {
+            background: var(--white);
+            color: var(--bg);
+            border-color: var(--white);
+            font-weight: 500;
+        }
+        .custom-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
             margin-bottom: 1rem;
         }
+        .custom-row input { flex: 1; }
+        .custom-row span { font-size: 0.75rem; color: var(--muted); }
 
-        /* Site list */
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            padding: 0.55rem 1rem;
+        }
+        .btn-white {
+            background: var(--white);
+            color: var(--bg);
+            width: 100%;
+        }
+        .btn-white:hover { opacity: 0.85; }
+        .btn-red {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(244, 63, 94, 0.15);
+        }
+        .btn-red:hover { background: rgba(244, 63, 94, 0.2); }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
+        .btn-ghost {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.5rem;
+            cursor: pointer;
+        }
+        .btn-ghost:hover { color: var(--red); }
+
+        /* ── Toggle ── */
+        .toggle-form { margin: 0; display: flex; align-items: center; }
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .toggle-track {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #2a2a30;
+            border-radius: 11px;
+            transition: background 0.2s ease;
+        }
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background: #555;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .toggle input:checked + .toggle-track {
+            background: var(--green);
+        }
+        .toggle input:checked + .toggle-track::after {
+            transform: translateX(18px);
+            background: white;
+        }
+
+        /* ── Site rows ── */
         .site-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #1a1a2e;
+            padding: 0.7rem 1.125rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
         }
         .site-row:last-child { border-bottom: none; }
-        .site-domain { font-family: monospace; font-size: 0.95rem; }
-        .site-domain.disabled { color: #555; text-decoration: line-through; }
-
-        button, .btn {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 0.4rem 0.9rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        button:hover, .btn:hover { background: #c73750; }
-        .btn-secondary { background: #0f3460; }
-        .btn-secondary:hover { background: #1a4a7a; }
-        .btn-small { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
-        .btn-danger { background: #555; }
-        .btn-danger:hover { background: #c73750; }
-
-        input[type="text"], input[type="number"] {
-            background: #1a1a2e;
-            border: 1px solid #333;
-            color: #e0e0e0;
-            padding: 0.4rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-        input[type="text"]:focus, input[type="number"]:focus {
-            outline: none;
-            border-color: #e94560;
-        }
-
-        .add-form { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
-        .add-form input { flex: 1; }
-
-        /* Timer */
-        .timer-display {
-            font-size: 3rem;
-            font-family: monospace;
-            text-align: center;
-            padding: 1rem;
-            color: #e94560;
-        }
-        .timer-label {
-            text-align: center;
-            color: #888;
-            margin-bottom: 0.5rem;
-        }
-        .timer-done { color: #4ecca3; }
-
-        .duration-options { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-        .duration-options label {
-            cursor: pointer;
-            padding: 0.4rem 0.8rem;
-            background: #1a1a2e;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-        .duration-options input[type="radio"] { display: none; }
-        .duration-options input[type="radio"]:checked + label {
-            background: #e94560;
-            color: white;
-        }
-
-        .focus-controls { display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: center; }
-
-        /* Status bar */
-        .status-bar {
+        .site-row:hover { background: rgba(255,255,255,0.015); }
+        .site-left { display: flex; align-items: center; gap: 0.625rem; }
+        .site-favicon {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            background: #1a1a1f;
             display: flex;
-            gap: 1rem;
             align-items: center;
-            font-size: 0.85rem;
-            color: #888;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
         }
-        .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            display: inline-block;
+        .site-name { font-size: 0.85rem; font-weight: 400; }
+        .site-name.off { color: var(--muted); }
+
+        /* ── Add form ── */
+        .add-row {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem 1.125rem;
+            border-top: 1px solid var(--border);
         }
-        .status-dot.ok { background: #4ecca3; }
-        .status-dot.blocked { background: #e94560; }
+        .add-row input { flex: 1; }
+
+        /* ── Inputs ── */
+        input[type="text"], input[type="number"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            transition: border-color 0.15s;
+            outline: none;
+            width: 100%;
+        }
+        input:focus { border-color: var(--border-hover); }
+        input::placeholder { color: #444; }
+
+        /* ── Empty ── */
+        .empty { padding: 1rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+        /* ── Misc ── */
+        .gap-sm { height: 0.5rem; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Scroll Jail</h1>
-        <p class="subtitle">Procrastination enforcement dashboard</p>
+        <div class="header">
+            <h1>Scroll Jail</h1>
+            <p>Stay focused. Stay productive.</p>
+        </div>
 
-        <!-- Current status -->
+        <!-- Status -->
         <div class="card">
-            <div class="status-bar">
-                <span class="status-dot {{ 'blocked' if state.get('is_blocked') else 'ok' }}"></span>
-                {% if state.get('is_blocked') %}
-                    Procrastinating on <strong>{{ state.get('current_domain', '?') }}</strong>
-                    for {{ state.get('dwell_seconds', 0) }}s
-                {% elif state.get('current_app') %}
-                    Focused — {{ state.get('current_app', 'unknown') }}
-                {% else %}
-                    Watcher not running
-                {% endif %}
+            <div class="card-body">
+                <div class="status-row">
+                    {% if state.get('is_blocked') %}
+                        <div class="status-indicator bad"></div>
+                        <div>
+                            <div class="status-text">Procrastinating on <strong>{{ state.get('current_domain', '?') }}</strong></div>
+                            <div class="status-sub">{{ state.get('dwell_seconds', 0) }} seconds and counting...</div>
+                        </div>
+                    {% elif state.get('current_app') %}
+                        <div class="status-indicator ok"></div>
+                        <div>
+                            <div class="status-text">You're focused</div>
+                            <div class="status-sub">{{ state.get('current_app', '') }}</div>
+                        </div>
+                    {% else %}
+                        <div class="status-indicator off"></div>
+                        <div>
+                            <div class="status-text">Watcher offline</div>
+                            <div class="status-sub">Run watcher.py to start</div>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- Focus Timer -->
-        <h2>Focus Session</h2>
         <div class="card">
-            {% if config.get('focus_session') %}
-                <div class="timer-label">Focus session in progress</div>
-                <div class="timer-display" id="timer">--:--</div>
-                <div class="focus-controls">
-                    <form method="POST" action="/stop-focus">
-                        <button type="submit" class="btn-danger">Stop Session</button>
+            <div class="card-head">
+                <h2>Focus Session</h2>
+                {% if config.get('focus_session') %}
+                    <form method="POST" action="/stop-focus" style="margin:0;">
+                        <button type="submit" class="btn btn-red">End Session</button>
                     </form>
-                </div>
-            {% else %}
-                <form method="POST" action="/start-focus">
-                    <div class="duration-options">
-                        <input type="radio" name="duration" value="25" id="d25" checked>
-                        <label for="d25">25 min</label>
-                        <input type="radio" name="duration" value="50" id="d50">
-                        <label for="d50">50 min</label>
-                        <input type="radio" name="duration" value="90" id="d90">
-                        <label for="d90">90 min</label>
-                        <input type="number" name="custom_dur" id="custom_dur"
-                               placeholder="Custom" min="1" max="240"
-                               style="width: 80px;">
-                        <span style="color: #888; font-size: 0.85rem;">min</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if config.get('focus_session') %}
+                    <div class="timer-center" id="timer-wrap">
+                        <div class="timer-time" id="timer">--:--</div>
+                        <div class="timer-sub" id="timer-sub">remaining</div>
+                        <div class="timer-bar">
+                            <div class="timer-bar-fill" id="timer-bar" style="width:100%"></div>
+                        </div>
                     </div>
-                    <div class="focus-controls">
-                        <button type="submit">Start Focus</button>
-                    </div>
-                </form>
-            {% endif %}
+                {% else %}
+                    <form method="POST" action="/start-focus">
+                        <div class="dur-row">
+                            <div class="dur-opt">
+                                <input type="radio" name="duration" value="25" id="d25" checked>
+                                <label for="d25">25 min</label>
+                            </div>
+                            <div class="dur-opt">
+                                <input type="radio" name="duration" value="50" id="d50">
+                                <label for="d50">50 min</label>
+                            </div>
+                            <div class="dur-opt">
+                                <input type="radio" name="duration" value="90" id="d90">
+                                <label for="d90">90 min</label>
+                            </div>
+                        </div>
+                        <div class="custom-row">
+                            <input type="number" name="custom_dur" id="custom_dur" placeholder="Or enter custom" min="1" max="240">
+                            <span>min</span>
+                        </div>
+                        <button type="submit" class="btn btn-white">Start Focus</button>
+                    </form>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Blocked Websites -->
-        <h2>Blocked Websites</h2>
         <div class="card">
+            <div class="card-head">
+                <h2>Blocked Websites</h2>
+            </div>
             {% for domain, enabled in config.get('predefined_sites', {}).items() %}
             <div class="site-row">
-                <span class="site-domain {{ '' if enabled else 'disabled' }}">{{ domain }}</span>
-                <form method="POST" action="/toggle-site" style="margin:0;">
+                <div class="site-left">
+                    <div class="site-favicon">{{ domain.split('.')[0][:2] }}</div>
+                    <span class="site-name {{ '' if enabled else 'off' }}">{{ domain }}</span>
+                </div>
+                <form method="POST" action="/toggle-site" class="toggle-form">
                     <input type="hidden" name="domain" value="{{ domain }}">
-                    <button type="submit" class="btn-small {{ 'btn-secondary' if enabled else 'btn-danger' }}">
-                        {{ 'Enabled' if enabled else 'Disabled' }}
-                    </button>
+                    <label class="toggle">
+                        <input type="checkbox" {{ 'checked' if enabled else '' }} onchange="this.closest('form').submit()">
+                        <span class="toggle-track"></span>
+                    </label>
                 </form>
             </div>
             {% endfor %}
         </div>
 
-        <!-- Custom Websites -->
-        <h2>Custom Blocked Sites</h2>
+        <!-- Custom Sites -->
         <div class="card">
+            <div class="card-head">
+                <h2>Custom Sites</h2>
+            </div>
             {% for domain in config.get('custom_sites', []) %}
             <div class="site-row">
-                <span class="site-domain">{{ domain }}</span>
+                <div class="site-left">
+                    <div class="site-favicon">{{ domain.split('.')[0][:2] }}</div>
+                    <span class="site-name">{{ domain }}</span>
+                </div>
                 <form method="POST" action="/remove-custom" style="margin:0;">
                     <input type="hidden" name="domain" value="{{ domain }}">
-                    <button type="submit" class="btn-small btn-danger">Remove</button>
+                    <button type="submit" class="btn-ghost">Remove</button>
                 </form>
             </div>
             {% else %}
-                <p style="color: #555; font-size: 0.9rem;">No custom sites added yet.</p>
+                <div class="empty">No custom sites yet</div>
             {% endfor %}
-
-            <form method="POST" action="/add-custom" class="add-form">
-                <input type="text" name="domain" placeholder="e.g. tiktok.com" required>
-                <button type="submit">Add</button>
-            </form>
+            <div class="add-row">
+                <form method="POST" action="/add-custom" style="display:flex;gap:0.5rem;width:100%;margin:0;">
+                    <input type="text" name="domain" placeholder="e.g. tiktok.com" required>
+                    <button type="submit" class="btn btn-outline">Add</button>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // Focus timer countdown
+        // Timer
         (function() {
-            const timerEl = document.getElementById('timer');
-            if (!timerEl) return;
-
+            const el = document.getElementById('timer');
+            if (!el) return;
             const session = {{ config.get('focus_session') | tojson }};
             if (!session) return;
 
-            const startTime = session.start_time * 1000;
-            const durationMs = session.duration_minutes * 60 * 1000;
-            const endTime = startTime + durationMs;
+            const start = session.start_time * 1000;
+            const dur = session.duration_minutes * 60 * 1000;
+            const end = start + dur;
+            const bar = document.getElementById('timer-bar');
+            const wrap = document.getElementById('timer-wrap');
+            const sub = document.getElementById('timer-sub');
 
-            function update() {
-                const remaining = endTime - Date.now();
-                if (remaining <= 0) {
-                    timerEl.textContent = "00:00";
-                    timerEl.classList.add('timer-done');
-                    document.querySelector('.timer-label').textContent = "Session complete!";
+            function tick() {
+                const left = end - Date.now();
+                const pct = Math.max(0, left / dur * 100);
+                if (bar) bar.style.width = pct + '%';
+
+                if (left <= 0) {
+                    el.textContent = '00:00';
+                    if (sub) sub.textContent = 'Session complete!';
+                    if (wrap) wrap.classList.add('timer-done');
+                    if (bar) bar.style.width = '0%';
                     return;
                 }
-                const totalSec = Math.ceil(remaining / 1000);
-                const m = Math.floor(totalSec / 60);
-                const s = totalSec % 60;
-                timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-                requestAnimationFrame(update);
+                const s = Math.ceil(left / 1000);
+                const m = Math.floor(s / 60);
+                el.textContent = String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
+                requestAnimationFrame(tick);
             }
-            update();
+            tick();
         })();
 
-        // Custom duration override
-        const customInput = document.getElementById('custom_dur');
-        if (customInput) {
-            const form = customInput.closest('form');
-            customInput.addEventListener('input', function() {
+        // Custom duration
+        const ci = document.getElementById('custom_dur');
+        if (ci) {
+            const f = ci.closest('form');
+            ci.addEventListener('input', function() {
                 if (this.value) {
-                    // Create hidden input to override duration
-                    let hidden = form.querySelector('input[name="duration"][type="hidden"]');
-                    if (!hidden) {
-                        hidden = document.createElement('input');
-                        hidden.type = 'hidden';
-                        hidden.name = 'duration';
-                        form.appendChild(hidden);
-                    }
-                    hidden.value = this.value;
-                    // Uncheck radio buttons visually
-                    form.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+                    let h = f.querySelector('input[name="duration"][type="hidden"]');
+                    if (!h) { h = document.createElement('input'); h.type='hidden'; h.name='duration'; f.appendChild(h); }
+                    h.value = this.value;
+                    f.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
                 } else {
-                    const hidden = form.querySelector('input[name="duration"][type="hidden"]');
-                    if (hidden) hidden.remove();
+                    const h = f.querySelector('input[name="duration"][type="hidden"]');
+                    if (h) h.remove();
                     document.getElementById('d25').checked = true;
                 }
             });
