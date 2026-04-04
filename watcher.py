@@ -97,6 +97,16 @@ def change_wallpaper():
     )
 
 
+def generate_roast(target: str, dwell: int, tier: str, cal_context: str | None) -> str | None:
+    """Try to get a Claude-generated roast. Returns None if unavailable."""
+    try:
+        from roast import generate_roast as _roast
+        return _roast(target, dwell, tier, cal_context)
+    except Exception as e:
+        print(f"  [Roast] Unavailable: {e}")
+        return None
+
+
 def load_calendar_context() -> str | None:
     """Try to get calendar context. Returns None if unavailable."""
     try:
@@ -180,67 +190,74 @@ def main():
             t = blocked_target  # shorthand for messages
             is_app = app and app in blocked_apps  # native app vs browser
 
-            if dwell >= 60 and not punished_60s:
-                if cal_context:
-                    msgs = [
-                        f"You have {cal_context}. But sure, {t} was more important. Gone.",
-                        f"{cal_context} — and you just blew 60 seconds on {t}. Enjoy the wallpaper.",
-                        f"With {cal_context} coming up, you chose {t}. Unbelievable.",
-                    ]
-                else:
-                    msgs = [
-                        f"That's it. 60 seconds on {t}. Privileges revoked.",
-                        f"Congratulations, you wasted a full minute on {t}. Shutting it down.",
-                        f"I gave you chances. You chose {t}. Now enjoy this wallpaper.",
-                        f"60 seconds of pure {t} brain rot. You did this to yourself.",
-                        f"Fun's over. {t} just cost you everything.",
-                    ]
-                print(f"  ESCALATION: 60s — closing app + shame wallpaper")
-                send_notification("Scroll Jail", random.choice(msgs))
+            if dwell >= 30 and not punished_60s:
+                # Try Claude-generated roast first
+                msg = generate_roast(t, dwell, "nuclear", cal_context)
+                if not msg:
+                    if cal_context:
+                        msgs = [
+                            f"You have {cal_context}. But sure, {t} was more important. Gone.",
+                            f"{cal_context} — and you just blew 30 seconds on {t}. Enjoy the wallpaper.",
+                            f"With {cal_context} coming up, you chose {t}. Unbelievable.",
+                        ]
+                    else:
+                        msgs = [
+                            f"That's it. 30 seconds on {t}. Privileges revoked.",
+                            f"I gave you chances. You chose {t}. Now enjoy this wallpaper.",
+                            f"30 seconds of pure {t} brain rot. You did this to yourself.",
+                            f"Fun's over. {t} just cost you everything.",
+                        ]
+                    msg = random.choice(msgs)
+                print(f"  ESCALATION: 30s — closing app + shame wallpaper")
+                print(f"  [Roast] {msg}")
+                send_notification("Scroll Jail", msg)
                 if is_app:
                     close_app(app)
                 else:
                     close_chrome()
                 change_wallpaper()
                 punished_60s = True
-            elif dwell >= 30 and not warned_30s:
-                if cal_context:
-                    msgs = [
-                        f"You have {cal_context} and you're still on {t}? 30 seconds before I shut it down.",
-                        f"{cal_context} is coming up. Get off {t}. 30 seconds. I'm serious.",
-                        f"Reminder: {cal_context}. Still on {t}. Closing in 30 seconds.",
-                    ]
-                else:
-                    msgs = [
-                        f"30 seconds on {t}. You have 30 more before I shut it down. Your move.",
-                        f"Still on {t}? Bold. Gets nuked in 30 seconds. Tick tock.",
-                        f"Half a minute wasted on {t}. In 30 seconds I'm pulling the plug.",
-                        f"You're really testing me. 30 seconds left before {t} goes bye-bye.",
-                        f"This is your FINAL warning. Get off {t} or it's gone in 30 seconds.",
-                    ]
-                print(f"  ESCALATION: 30s — final warning")
-                send_notification("Scroll Jail", random.choice(msgs))
+            elif dwell >= 20 and not warned_30s:
+                msg = generate_roast(t, dwell, "final", cal_context)
+                if not msg:
+                    if cal_context:
+                        msgs = [
+                            f"You have {cal_context} and you're still on {t}? 10 seconds before I shut it down.",
+                            f"{cal_context} is coming up. Get off {t}. 10 seconds. I'm serious.",
+                            f"Reminder: {cal_context}. Still on {t}. Closing in 10 seconds.",
+                        ]
+                    else:
+                        msgs = [
+                            f"Still on {t}? Bold. Gets nuked in 10 seconds. Tick tock.",
+                            f"20 seconds wasted on {t}. In 10 seconds I'm pulling the plug.",
+                            f"This is your FINAL warning. Get off {t} or it's gone in 10 seconds.",
+                        ]
+                    msg = random.choice(msgs)
+                print(f"  ESCALATION: 20s — final warning")
+                print(f"  [Roast] {msg}")
+                send_notification("Scroll Jail", msg)
                 warned_30s = True
             elif dwell >= 10 and not warned_10s:
-                if cal_context:
-                    msgs = [
-                        f"You have {cal_context}. And you're on {t}? Really?",
-                        f"{t}? With {cal_context} coming up? Bold choice.",
-                        f"Friendly reminder: {cal_context}. Now close {t}.",
-                        f"{cal_context} isn't going to prepare for itself. Get off {t}.",
-                    ]
-                else:
-                    msgs = [
-                        f"Caught you on {t}. Close it now or things escalate.",
-                        f"Really? {t}? You have better things to do and we both know it.",
-                        f"10 seconds on {t}. I'm watching. Don't make me do something we'll both regret.",
-                        f"Hey. {t}. Stop it. This is your friendly first warning.",
-                        f"I see you on {t}. Step away.",
-                        f"{t}? In THIS economy? Get back to work.",
-                        f"You opened {t} like I wouldn't notice. I noticed.",
-                    ]
+                msg = generate_roast(t, dwell, "warning", cal_context)
+                if not msg:
+                    if cal_context:
+                        msgs = [
+                            f"You have {cal_context}. And you're on {t}? Really?",
+                            f"{t}? With {cal_context} coming up? Bold choice.",
+                            f"Friendly reminder: {cal_context}. Now close {t}.",
+                            f"{cal_context} isn't going to prepare for itself. Get off {t}.",
+                        ]
+                    else:
+                        msgs = [
+                            f"Caught you on {t}. Close it now or things escalate.",
+                            f"Really? {t}? You have better things to do and we both know it.",
+                            f"{t}? In THIS economy? Get back to work.",
+                            f"You opened {t} like I wouldn't notice. I noticed.",
+                        ]
+                    msg = random.choice(msgs)
                 print(f"  ESCALATION: 10s — first warning")
-                send_notification("Scroll Jail", random.choice(msgs))
+                print(f"  [Roast] {msg}")
+                send_notification("Scroll Jail", msg)
                 warned_10s = True
 
         state = {
