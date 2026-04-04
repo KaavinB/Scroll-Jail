@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Jail</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        h1 { color: #e94560; margin-bottom: 0.5rem; font-size: 1.8rem; }
+        h2 { color: #e94560; margin: 1.5rem 0 0.75rem; font-size: 1.2rem; }
+        .subtitle { color: #888; margin-bottom: 2rem; }
+        .container { max-width: 600px; margin: 0 auto; }
+
+        .card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Site list */
+        .site-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .site-row:last-child { border-bottom: none; }
+        .site-domain { font-family: monospace; font-size: 0.95rem; }
+        .site-domain.disabled { color: #555; text-decoration: line-through; }
+
+        button, .btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.9rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        button:hover, .btn:hover { background: #c73750; }
+        .btn-secondary { background: #0f3460; }
+        .btn-secondary:hover { background: #1a4a7a; }
+        .btn-small { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+        .btn-danger { background: #555; }
+        .btn-danger:hover { background: #c73750; }
+
+        input[type="text"], input[type="number"] {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+
+        .add-form { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+        .add-form input { flex: 1; }
+
+        /* Timer */
+        .timer-display {
+            font-size: 3rem;
+            font-family: monospace;
+            text-align: center;
+            padding: 1rem;
+            color: #e94560;
+        }
+        .timer-label {
+            text-align: center;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .timer-done { color: #4ecca3; }
+
+        .duration-options { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+        .duration-options label {
+            cursor: pointer;
+            padding: 0.4rem 0.8rem;
+            background: #1a1a2e;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .duration-options input[type="radio"] { display: none; }
+        .duration-options input[type="radio"]:checked + label {
+            background: #e94560;
+            color: white;
+        }
+
+        .focus-controls { display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: center; }
+
+        /* Status bar */
+        .status-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.ok { background: #4ecca3; }
+        .status-dot.blocked { background: #e94560; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Scroll Jail</h1>
+        <p class="subtitle">Procrastination enforcement dashboard</p>
+
+        <!-- Current status -->
+        <div class="card">
+            <div class="status-bar">
+                <span class="status-dot {{ 'blocked' if state.get('is_blocked') else 'ok' }}"></span>
+                {% if state.get('is_blocked') %}
+                    Procrastinating on <strong>{{ state.get('current_domain', '?') }}</strong>
+                    for {{ state.get('dwell_seconds', 0) }}s
+                {% elif state.get('current_app') %}
+                    Focused — {{ state.get('current_app', 'unknown') }}
+                {% else %}
+                    Watcher not running
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Focus Timer -->
+        <h2>Focus Session</h2>
+        <div class="card">
+            {% if config.get('focus_session') %}
+                <div class="timer-label">Focus session in progress</div>
+                <div class="timer-display" id="timer">--:--</div>
+                <div class="focus-controls">
+                    <form method="POST" action="/stop-focus">
+                        <button type="submit" class="btn-danger">Stop Session</button>
+                    </form>
+                </div>
+            {% else %}
+                <form method="POST" action="/start-focus">
+                    <div class="duration-options">
+                        <input type="radio" name="duration" value="25" id="d25" checked>
+                        <label for="d25">25 min</label>
+                        <input type="radio" name="duration" value="50" id="d50">
+                        <label for="d50">50 min</label>
+                        <input type="radio" name="duration" value="90" id="d90">
+                        <label for="d90">90 min</label>
+                        <input type="number" name="custom_dur" id="custom_dur"
+                               placeholder="Custom" min="1" max="240"
+                               style="width: 80px;">
+                        <span style="color: #888; font-size: 0.85rem;">min</span>
+                    </div>
+                    <div class="focus-controls">
+                        <button type="submit">Start Focus</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Blocked Websites -->
+        <h2>Blocked Websites</h2>
+        <div class="card">
+            {% for domain, enabled in config.get('predefined_sites', {}).items() %}
+            <div class="site-row">
+                <span class="site-domain {{ '' if enabled else 'disabled' }}">{{ domain }}</span>
+                <form method="POST" action="/toggle-site" style="margin:0;">
+                    <input type="hidden" name="domain" value="{{ domain }}">
+                    <button type="submit" class="btn-small {{ 'btn-secondary' if enabled else 'btn-danger' }}">
+                        {{ 'Enabled' if enabled else 'Disabled' }}
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Custom Websites -->
+        <h2>Custom Blocked Sites</h2>
+        <div class="card">
+            {% for domain in config.get('custom_sites', []) %}
+            <div class="site-row">
+                <span class="site-domain">{{ domain }}</span>
+                <form method="POST" action="/remove-custom" style="margin:0;">
+                    <input type="hidden" name="domain" value="{{ domain }}">
+                    <button type="submit" class="btn-small btn-danger">Remove</button>
+                </form>
+            </div>
+            {% else %}
+                <p style="color: #555; font-size: 0.9rem;">No custom sites added yet.</p>
+            {% endfor %}
+
+            <form method="POST" action="/add-custom" class="add-form">
+                <input type="text" name="domain" placeholder="e.g. tiktok.com" required>
+                <button type="submit">Add</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Focus timer countdown
+        (function() {
+            const timerEl = document.getElementById('timer');
+            if (!timerEl) return;
+
+            const session = {{ config.get('focus_session') | tojson }};
+            if (!session) return;
+
+            const startTime = session.start_time * 1000;
+            const durationMs = session.duration_minutes * 60 * 1000;
+            const endTime = startTime + durationMs;
+
+            function update() {
+                const remaining = endTime - Date.now();
+                if (remaining <= 0) {
+                    timerEl.textContent = "00:00";
+                    timerEl.classList.add('timer-done');
+                    document.querySelector('.timer-label').textContent = "Session complete!";
+                    return;
+                }
+                const totalSec = Math.ceil(remaining / 1000);
+                const m = Math.floor(totalSec / 60);
+                const s = totalSec % 60;
+                timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                requestAnimationFrame(update);
+            }
+            update();
+        })();
+
+        // Custom duration override
+        const customInput = document.getElementById('custom_dur');
+        if (customInput) {
+            const form = customInput.closest('form');
+            customInput.addEventListener('input', function() {
+                if (this.value) {
+                    // Create hidden input to override duration
+                    let hidden = form.querySelector('input[name="duration"][type="hidden"]');
+                    if (!hidden) {
+                        hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'duration';
+                        form.appendChild(hidden);
+                    }
+                    hidden.value = this.value;
+                    // Uncheck radio buttons visually
+                    form.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+                } else {
+                    const hidden = form.querySelector('input[name="duration"][type="hidden"]');
+                    if (hidden) hidden.remove();
+                    document.getElementById('d25').checked = true;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
