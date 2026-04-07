@@ -1,4 +1,4 @@
-# Hostile Enforcer
+# Scroll Jail
 
 A macOS productivity enforcer. Detects procrastination via Chrome URL tracking,
 lets Claude punish you through MCP tools.
@@ -6,7 +6,7 @@ lets Claude punish you through MCP tools.
 ## Setup
 
 ```bash
-cd hostile-enforcer
+cd scroll-jail
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -35,10 +35,10 @@ python server.py
 ## Connect to Claude Code
 
 ```bash
-claude mcp add hostile-enforcer -- /ABSOLUTE/PATH/TO/.venv/bin/python /ABSOLUTE/PATH/TO/server.py
+claude mcp add scroll-jail -- /ABSOLUTE/PATH/TO/.venv/bin/python /ABSOLUTE/PATH/TO/server.py
 ```
 
-Then restart Claude Code. Verify with `/mcp` — you should see `hostile-enforcer` listed.
+Then restart Claude Code. Verify with `/mcp` — you should see `scroll-jail` listed.
 
 ## Connect to Claude Desktop
 
@@ -47,7 +47,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "hostile-enforcer": {
+    "scroll-jail": {
       "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
       "args": ["/ABSOLUTE/PATH/TO/server.py"]
     }

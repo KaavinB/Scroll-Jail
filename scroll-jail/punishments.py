@@ -11,7 +11,7 @@ load_dotenv()
 
 # CUSTOMIZE: set this to an actual image path for the demo.
 # macOS built-in fallback — should work on any Mac without extra files.
-SHAME_WALLPAPER_PATH = "/System/Library/Desktop Pictures/Solid Colors/Red Orange.png"
+SHAME_WALLPAPER_PATH = "/Users/kaavin/Downloads/Work.jpg"
 
 
 def _osascript(script: str) -> bool:

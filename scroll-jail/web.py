@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Flask web UI for Hostile Enforcer.
+Flask web UI for Scroll Jail.
 Manage blocked websites and focus sessions.
 """
 import json
@@ -79,6 +79,45 @@ def remove_custom():
     return redirect(url_for("index"))
 
 
+# --- Blocked apps management ---
+
+@app.route("/toggle-app", methods=["POST"])
+def toggle_app():
+    app_name = request.form.get("app_name", "")
+    config = read_config()
+    apps = config.get("blocked_apps", {})
+    if app_name in apps:
+        apps[app_name] = not apps[app_name]
+    config["blocked_apps"] = apps
+    write_config(config)
+    return redirect(url_for("index"))
+
+
+@app.route("/add-app", methods=["POST"])
+def add_app():
+    app_name = request.form.get("app_name", "").strip()
+    if app_name:
+        config = read_config()
+        apps = config.get("blocked_apps", {})
+        if app_name not in apps:
+            apps[app_name] = True
+            config["blocked_apps"] = apps
+            write_config(config)
+    return redirect(url_for("index"))
+
+
+@app.route("/remove-app", methods=["POST"])
+def remove_app():
+    app_name = request.form.get("app_name", "")
+    config = read_config()
+    apps = config.get("blocked_apps", {})
+    if app_name in apps:
+        del apps[app_name]
+        config["blocked_apps"] = apps
+        write_config(config)
+    return redirect(url_for("index"))
+
+
 # --- Focus session ---
 
 @app.route("/start-focus", methods=["POST"])
@@ -110,5 +149,5 @@ def api_state():
 
 
 if __name__ == "__main__":
-    print("[Hostile Enforcer] Web UI running at http://localhost:5050")
+    print("[Scroll Jail] Web UI running at http://localhost:5050")
     app.run(host="127.0.0.1", port=5050, debug=True)

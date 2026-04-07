@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MCP server for Hostile Enforcer.
+MCP server for Scroll Jail.
 Run this process; Claude Desktop / Claude Code connects via stdio.
 Claude uses these tools to read state and punish procrastination.
 """
@@ -12,7 +12,7 @@ import punishments
 STATE_FILE = Path(__file__).parent / "state.json"
 
 mcp = FastMCP(
-    "hostile-enforcer",
+    "scroll-jail",
     instructions=(
         "You are a strict productivity enforcer. "
         "Poll get_focus_state regularly and follow this EXACT escalation ladder:\n"
@@ -49,7 +49,7 @@ def send_warning(message: str = "Stop procrastinating and get back to work!") ->
     Sends a macOS desktop notification with a warning message.
     Use this as a first, gentle nudge.
     """
-    return punishments.send_notification("Hostile Enforcer", message)
+    return punishments.send_notification("Scroll Jail", message)
 
 
 @mcp.tool()
