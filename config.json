@@ -1,0 +1,27 @@
+{
+  "predefined_sites": {
+    "twitter.com": true,
+    "x.com": true,
+    "reddit.com": true,
+    "youtube.com": true,
+    "instagram.com": true,
+    "facebook.com": true
+  },
+  "custom_sites": [
+    "tiktok.com",
+    "linkedin.com",
+    "wikipedia.com"
+  ],
+  "blocked_apps": {
+    "Prime Video": true,
+    "Netflix": true,
+    "TikTok": true,
+    "Twitter": true,
+    "Instagram": true,
+    "Hulu": true,
+    "Disney+": true,
+    "spotify": false,
+    "Spotify": true
+  },
+  "focus_session": null
+}
